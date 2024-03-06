@@ -2,7 +2,7 @@
 function createDataset(fields, constraints, sortFields) {
 
 	var dsConsultaPlanoCD = DatasetBuilder.newDataset();
-    var dataSource = "/jdbc/FluigDSRM";
+    var dataSource = "/jdbc/FluigDS";
     var ic = new javax.naming.InitialContext();
     var ds = ic.lookup(dataSource);
     var created = false;

@@ -2,6 +2,9 @@ var hotS;
 var oldValues = [];
 var isUserChange = true;
 var valoresParaImprimir = []
+const result = {};
+var tamanhoTabela = ''
+
 
 
 function preencheTabelaSaida(){
@@ -41,10 +44,11 @@ function preencheTabelaSaida(){
 
     } else {
         try {
-        let megaObjeto = transformaArrayEmObjeto(row);
-        console.log(megaObjeto);
+        var semDuplicatas = removeDuplicatas(row, 'SEQUENCIA');
+            console.log(semDuplicatas)
         var container = document.getElementById('tabelaSaida');
-
+            tamanhoTabela = semDuplicatas.length
+            console.log("Tamanho da tabela: "+tamanhoTabela)
         try {
             $('#tabelaSaida').empty()
         } catch (e) {
@@ -52,16 +56,23 @@ function preencheTabelaSaida(){
         }
         $("#opcoesExtra2").removeClass("ninjaOculto");
         hotS = new Handsontable(container, {
-            data: row,
+            data: semDuplicatas,
             rowHeaders: true,
-            colHeaders: ['','Desenho', 'Seq', 'Ordem','Qtd','OS',  'Dimensões', 'Desc',  'Plano', 'Posição', 'Atv', 'Desc Atv', 'Entregue', 'Retirada' ,'Data Entregue', 'Data Saída'],
+            colHeaders: ['','Desenho', 'Seq', 'Ordem','Qtd','OS',  'Dimensões', 'Desc',  'Plano', 'Posição', 'Atv', 'Desc Atv', 'Entregue', 'Retirada' ,'Data Entregue', 'Data Saída','Próximos','FornPara'],
             filters: true,
-            dropdownMenu: true,
+            dropdownMenu: [
+                "filter_by_condition",
+                "filter_by_condition2",
+                "filter_operators",
+                "filter_by_value",
+                "filter_action_bar",
+              ],
             rowHeaders: false,
             licenseKey: 'non-commercial-and-evaluation',
             stretchH: 'all', // Estica as colunas para preencher o contêiner horizontalmente
             width: '100%', // Define a largura da tabela como 100% do contêiner
-            colWidths:[5, 15, 15, 10, 10, 15, 15, 15, 10, 8, 8, 10, 10, 10, 10, 10], // Defina as larguras das colunas em porcentagens
+            height: '300px', // Define a altura da tabela
+            colWidths:[30, 150, 80, 80, 50, 150, 200, 50, 130, 80, 80, 80, 100, 100, 120, 120, 250, 180],
             hiddenColumns: {
                 columns: [10, 11, 12, 13, 15,],
                 indicators: true
@@ -74,16 +85,22 @@ function preencheTabelaSaida(){
                         var prop = change[1];
                         var oldValue = change[2];
                         var newValue = change[3];
-        
-                        // Verifica se a checkbox está marcada na linha que está sendo editada
+            
                         var checkboxValue = this.getDataAtCell(row, 0);
+            
+                    
+                        if (prop === 'QUANTIDADE' && (newValue === 0 || newValue === '') && checkboxValue) {
+                            chamaAlerta('Erro', 'error', 'Não é possível colocar 0 como quantidade quando a checkbox está marcada.');
+                            return false; 
+                        }
+            
                         if (prop !== 'CHECKBOX' && !checkboxValue) {
                             chamaAlerta('Erro', 'error', 'Você precisa marcar a checkbox para editar a linha.');
-                            return false; // Impede a edição se a checkbox não estiver marcada
+                            return false; 
                         }
                     }
                 }
-                return true; // Permite a edição se a checkbox estiver marcada
+                return true; 
             },
             afterChange: function(changes, source) {
                 if (source === 'edit') {
@@ -93,7 +110,7 @@ function preencheTabelaSaida(){
                         var prop = change[1];
                         var oldValue = change[2];
                         var newValue = change[3];
-    
+            
                         if (prop === 'QUANTIDADE' && newValue > oldValue) {
                             this.setDataAtRowProp(row, prop, oldValue);
                         }
@@ -112,26 +129,10 @@ function preencheTabelaSaida(){
                 {readOnly: true, data: "ORDEM"},
                 {
                     readOnly: false, 
-                    data: "QUANTIDADE", 
-                    validator: function(value, callback) {
-                        var maxQuantity = this.instance.getDataAtRowProp(this.row, 'QUANTIDADE');
-                        if (value <= maxQuantity) {
-                            callback(true);
-                        } else {
-                            chamaAlerta('Erro','error','A quantidade não pode ser maior do que a existente');
-                            callback(false);
-                        }
-                        if (value > 0) {
-                            callback(true);
-                        } else {
-                            var oldValue = this.instance.getDataAtRowProp(this.row, 'QUANTIDADE');
-                            chamaAlerta('Erro','error','A quantidade deve ser maior que 0');
-                            this.instance.setDataAtRowProp(this.row, 'QUANTIDADE', oldValue);
-                            callback(false);
-                        }
-                    }
+                    data: "QUANTIDADE",
+                    type: 'numeric',
+                    
                 },
-                
                 {readOnly: true, data: "OS"},
                 {readOnly: true, data: "DIMENSOES"},
                 {readOnly: true, data: "DESCRICAO"}, 
@@ -140,9 +141,32 @@ function preencheTabelaSaida(){
                 {readOnly: true, data: "ATIVIDADE"},
                 {readOnly: true, data: "DSCATIVIDADE"},
                 {readOnly: true, data: "NOMEENTREGUE"},
-                {readOnly: false, data: "NOMERETIRADA"},
-                {readOnly: true, data: "DATAENTREGUE"},
-                {readOnly: false, data: "DATARETIRADA"}
+                {readOnly: true, data: "NOMERETIRADA"},
+                {readOnly: true, data: "DATAENTREGUE",
+                        renderer: function(instance, td, row, col, prop, value, cellProperties) {
+                            var parsedDate = moment(value, 'YYYY-MM-DD HH:mm:ss');
+                            td.innerHTML = parsedDate.format('HH:mm:ss DD/MM/YYYY');
+                            return td; 
+                        }
+                    },
+                {readOnly: true, data: "DATARETIRADA",
+                    renderer: function(instance, td, row, col, prop, value, cellProperties) {
+                        var parsedDate = moment(value, 'YYYY-MM-DD HH:mm:ss');
+                        td.innerHTML = parsedDate.format('HH:mm:ss DD/MM/YYYY');
+                        return td; 
+                    }
+                },
+                    {
+                        readOnly: true, 
+                        data: "DESCATIVIDADES",
+                        renderer: function(instance, td, row, col, prop, value, cellProperties) {
+                            Handsontable.renderers.TextRenderer.apply(this, arguments);
+                            td.style.whiteSpace = 'normal'; // Quebra de texto
+                            td.style.wordWrap = 'break-word'; // Quebra de texto
+                            return td;
+                        }
+                    },
+                    {readOnly: true, data: "FORNPARA"},
             ],
             afterLoadData: function() {
                 this.render();
@@ -178,7 +202,7 @@ function isAnyCheckboxChecked() {
     var data = hotS.getData();
     
     // Percorre os dados para verificar se alguma checkbox está marcada
-    for (var i = 0; i < data.length; i++) {
+    for (var i = 0; i <= tamanhoTabela; i++) {
         var checkboxValue = data[i][0]; // A coluna 0 é a coluna "CHECKBOX"
         if (checkboxValue) {
             return true; // Retorna true se encontrar uma checkbox marcada
@@ -206,7 +230,20 @@ function registrarSaida(){
         chamaAlerta('Atenção','warning',"Os campos Entregue e Recebido devem estar preenchidos")
         return
     }
-    
+    for(let i=0; i<= tamanho;i++){
+        var linha = tabela[i]
+        if(linha[0] == null){
+            console.log("Não marcou :D")
+        }else {
+            var quantidades = linha[4] 
+            if (quantidades == 0){
+                console.log("Quantidade zerada")
+                chamaAlerta('Atenção','error','A quantidade não pode ser 0')
+                myLoading2.hide()
+                break
+            }
+        }
+    }
     for(let i=0; i<= tamanho;i++){
         myLoading2.show()
         var linha = tabela[i]
@@ -220,8 +257,8 @@ function registrarSaida(){
             var quantidades = linha[4]
             var dimensao  = linha[6]
             console.log("Minha quantidade é : "+quantidades)
-            if (quantidades < 0 || isNullOrEmptyOrUndefined(quantidades) ){
-                chamaAlerta('Atenção','error','A quantidade não pode ser inferior a 0')
+            if (quantidades == 0){
+                chamaAlerta('Atenção','error','A quantidade não pode ser 0')
                 return
             }
             var planos = linha[8]
@@ -233,8 +270,8 @@ function registrarSaida(){
             }
             var dtReti = dataAtualFormatoSQL()
             var dtEntre = linha[14]
-            console.log("dtEntre/dtReti")
-            console.log(dtEntre , dtReti)
+            var proximo = linha[16]
+            var forn = linha[17]
             var os =  $('#NUM_OS_SAIDA').val()
             var a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11
             var constraints = new Array()
@@ -282,12 +319,13 @@ function registrarSaida(){
                 a11 = DatasetFactory.createConstraint("DIMENSAO", dimensao, dimensao, ConstraintType.MUST);
                 constraints.push(a11);
             }
-            console.log(constraints)
-            valoresParaImprimir.push(constraints)
             var dataset = DatasetFactory.getDataset('dsAtualizaCD', null, constraints, null);
-            chamaAlerta('Sucesso','success','Os materiais foram atualizados com sucesso :D')
-            var dataset = DatasetFactory.getDataset('dsInsereLogCD', null, constraints, null);
-            valoresParaImprimir.push(constraints)
+            var dataset1 = DatasetFactory.getDataset('dsInsereLogCD', null, constraints, null);
+            chamaAlerta('Sucesso','success','Os materiais foram atualizados com sucesso!')
+            valoresParaImprimir.push({
+                "OS":os,'PLANO':planos,'DESENHO':desenhos,'QTD': quantidades,'DTRETIRADA': dtReti,'DTENTREGUE':dtEntre,'ORDEM': ordem,'DIMENSOES':dimensao,'PROXIMO': proximo,
+                'RECEBIDO': retirada,'ENTREGUE': entregue, "FORNPARA": forn
+            })
         }
         
         myLoading2.hide()
@@ -316,7 +354,6 @@ function dataAtualFormatoSQL() {
     var minute = now.getMinutes();
     var second = now.getSeconds();
 
-    // Adiciona um zero à esquerda se o mês, dia, hora, minuto ou segundo for menor que 10
     month = month < 10 ? '0' + month : month;
     day = day < 10 ? '0' + day : day;
     hour = hour < 10 ? '0' + hour : hour;
@@ -327,14 +364,19 @@ function dataAtualFormatoSQL() {
     return sqlDatetime;
 }
 function mapearDadosParaHandsontable(dados) {
-    // Mapeia os dados para o formato aceito pela Handsontable
     const dadosMapeados = dados.map((linha) => {
       return linha.map((item) => {
-        return item._initialValue; // Altere para o campo que deseja exibir na tabela
+        return item._initialValue; 
       });
     });
   
     return dadosMapeados;
+}
+function transformaArrayEmObjeto(arrayDeArrays) {
+    return arrayDeArrays.reduce((objeto, arrayAtual, indice) => {
+        objeto[`propriedade${indice + 1}`] = arrayAtual;
+        return objeto;
+    }, {});
 }
 
 function eliminarDuplicatas(array) {
@@ -348,24 +390,16 @@ function eliminarDuplicatas(array) {
     return uniqueArray;
 }
 
-function janelaParaImprimir(dados) {
-    var novaJanela = window.open("", "_blank");
-    console.log(dados)
-    var dadosMapeados = dados.map(array => {
-        return array.map(item => {
-            return {
-                campo: item._field,
-                valorInicial: item._initialValue,
-                valorFinal: item._finalValue,
-                tipo: item._type,
-                likeSearch: item._likeSearch,
-            };
-        });
-    });
+function transformaValoresEmArray(objeto) {
+    return Object.values(objeto);
+}
+
+
+async function janelaParaImprimir(dados) {
     
-    console.log(dadosMapeados)
-    dadosMapeados = eliminarDuplicatas(dadosMapeados);
-    console.log(dadosMapeados)
+    var novaJanela = window.open("", "_blank");
+    console.log("========> ARRAY")
+    console.log(dados)
     novaJanela.document.write(`
         <!DOCTYPE html>
         <html>
@@ -378,13 +412,14 @@ function janelaParaImprimir(dados) {
                 body {
                     font-family: "Montserrat", sans-serif;
                     font-optical-sizing: auto;
-                    font-weight: 400; /* Substitua pelo peso desejado */
+                    font-weight: 400; 
                     font-style: normal;
                     padding: 2%;
                 }
                 table {
                     border-collapse: collapse;
                     width: 100%;
+                    font-size: 10px;
                 }
                 th, td {
                     border: 1px solid black;
@@ -433,6 +468,10 @@ function janelaParaImprimir(dados) {
                         page-break-inside: avoid;
                       }
                 }
+                .col-proximo {
+                    max-height: 60px; /* Altura máxima da célula */
+                    overflow-y: auto; /* Adiciona barra de rolagem vertical se necessário */
+                }
                 .montserrat-padrao {
                     font-family: "Montserrat", sans-serif;
                     font-optical-sizing: auto;
@@ -443,23 +482,25 @@ function janelaParaImprimir(dados) {
             
         </head>
         <body>
-                <div class="linha-Topo" style="display:flex;justify-content: space-between;">
-                    <h1>Documento de relação do estoque</h1>
-                    <img src="https://i.imgur.com/lNFgLB1.png" class="img-header"/>
-                </div>
             
             <table>
                 <colgroup>
                     <col style="width:20%">
-                    <col style="width:15%">
-                    <col style="width:15%">
+                    <col style="width:10%">
+                    <col style="width:10%">
                     <col style="width: 5%">
                     <col style="width:10%; text-align: center;">
                     <col style="width:10%; text-align: center;">
                     <col style="width:10%">
                     <col style="width:15%">
+                    <col style="width:13%">
                 </colgroup>
                 <thead>
+                
+                    <div class="linha-Topo" style="display:flex;justify-content: space-between;">
+                        <h1>Documento de relação do estoque</h1>
+                        <img src="https://i.imgur.com/lNFgLB1.png" class="img-header"/>
+                    </div>
                     <tr>
                         <th>OS</th>
                         <th>Plano de Corte</th>
@@ -469,43 +510,49 @@ function janelaParaImprimir(dados) {
                         <th>Data Saida</th>
                         <th>Ordem</th>
                         <th>Dimensão</th>
+                        <th>Proximo</th>
+                        <th>Fornecer P/</th>
                     </tr>
                 </thead>
                 <tbody>
-                ${dadosMapeados.map(row => `
-                        <tr>
-                            ${row.map(item => `
-                                ${ item.campo == 'ENTREGUE' || item.campo == 'RECEBIDO' || item.campo == 'SEQUENCIA' ? 
-                                ''
-                                :
-                                item.campo == 'DATAENTREGUE' || item.campo == 'DATARETIRADA' ?
-                                `<td>${formatarDataSQL(item.valorInicial)}</td>`
-                                :
-                                `<td>${item.valorInicial}</td>`
-                                }
-                            `).join('')}
-                        </tr>
+                    ${ dados.map(item =>`
+                    <tr>
+                        <td>${item.OS}</td>
+                        <td>${item.PLANO}</td>
+                        <td>${item.DESENHO}</td>
+                        <td>${item.QTD}</td>
+                        <td>${formatarDataSQL(item.DTRETIRADA)}</td>
+                        <td>${formatarDataSQL(item.DTENTREGUE)}</td>
+                        <td>${item.ORDEM}</td>
+                        <td>${item.DIMENSOES}</td>
+                        <td>${item.PROXIMO}</td>
+                        <td>${item.FORNPARA}</td>
+                    </tr>
+
                     `).join('')}
+                    <div class="baixo-imprime">  
+                        <div class="linha-assinatura">
+                                        <div class="campo-assinatura">
+                                                <div class="linha-linha"></div>
+                                                <p class="nome-assinatura">${  dados[0].ENTREGUE}</p>
+                                        </div>
+                                        <div class="campo-assinatura">
+                                                <div class="linha-linha"></div>
+                                                <p class="nome-assinatura">${  dados[0].RECEBIDO}</p>
+                                        </div>
+                                        
+                        </div>
+                        <div class="linha-assinatura">
+                                    <div class="campo-assinatura">
+                                        <div class="linha-linha"></div>
+                                        <p class="nome-assinatura">Célula de destino</p>
+                                    </div>      
+                        </div>
+                    </div>
                 </tbody>
+                
             </table>
-            <div class="baixo-imprime">  
-                <div class="linha-assinatura">
-                                <div class="campo-assinatura">
-                                        <div class="linha-linha"></div>
-                                        <p class="nome-assinatura">${dadosMapeados[0][7].valorInicial}</p>
-                                </div>
-                                <div class="campo-assinatura">
-                                        <div class="linha-linha"></div>
-                                        <p class="nome-assinatura">${dadosMapeados[0][8].valorInicial}</p>
-                                </div>
-                </div>
-                <div class="linha-assinatura">
-                            <div class="campo-assinatura">
-                                <div class="linha-linha"></div>
-                                <p class="nome-assinatura">Célula de destino</p>
-                            </div>      
-                </div>
-            </div>
+            
             
         </body>
         </html>
@@ -533,3 +580,12 @@ function formatarDataSQL(dataSQL) {
    
     return `${dia}/${mes}/${ano}`;
 }
+
+function removeDuplicatas(array, propriedade) {
+    const mapa = new Map();
+    array.forEach(item => {
+      mapa.set(item[propriedade], item);
+    });
+    return [...mapa.values()];
+  }
+  

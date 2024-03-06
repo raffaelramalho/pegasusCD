@@ -1,6 +1,6 @@
 function createDataset(fields, constraints, sortFields) {
     var dsRegistraEntrada = DatasetBuilder.newDataset();
-    var dataSource = "/jdbc/FluigDSRM";
+    var dataSource = "/jdbc/FluigDS";
     var ic = new javax.naming.InitialContext();
     var ds = ic.lookup(dataSource);
 

@@ -32,3 +32,6 @@
     vertical-align: middle;
   }
   
+  .semPermissao{
+    display: none !important;
+  }

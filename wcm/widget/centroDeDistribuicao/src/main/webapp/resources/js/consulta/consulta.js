@@ -73,7 +73,8 @@ function consultaTabela(){
             licenseKey: 'non-commercial-and-evaluation',
             stretchH: 'all', // Estica as colunas para preencher o contêiner horizontalmente
             width: '100%', // Define a largura da tabela como 100% do contêiner
-            colWidths:[5, 15, 17, 5, 10, 15, 15, 10, 10, 10, 10, 15, 20, 20, 25, 25], // Defina as larguras das colunas em porcentagens
+            height: '300px', // Define a altura da tabela
+            colWidths:[30, 150, 80, 80, 50, 150, 200, 50, 130, 80, 80, 80, 100, 100, 120, 120, 250, 180],
             hiddenColumns: {
                 columns: [ 0, 4, 5, 8, 9, 10],
                 indicators: true

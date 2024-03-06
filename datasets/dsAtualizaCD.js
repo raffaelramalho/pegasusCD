@@ -1,6 +1,6 @@
 function createDataset(fields, constraints, sortFields) {
     var dsAtualizaCD = DatasetBuilder.newDataset();
-    var dataSource = "/jdbc/FluigDSRM";
+    var dataSource = "/jdbc/FluigDS";
     var ic = new javax.naming.InitialContext();
     var ds = ic.lookup(dataSource);
 
@@ -55,7 +55,7 @@ function createDataset(fields, constraints, sortFields) {
    
         
         var myQuery =   "   UPDATE ESTOQUECD "+
-                        "    SET QUANTIDADE = QUANTIDADE - "+quantidades+","+
+                        "    SET QUANTIDADE = CASE  WHEN QUANTIDADE > 0 THEN QUANTIDADE - "+quantidades+" ELSE QUANTIDADE,"+
                         "    DATARETIRADA = '"+dataSaida+"' "+
                         "    WHERE OS = '"+numOS+"' "+
                         "    AND PLANOCORTE = '"+planos+"' "+

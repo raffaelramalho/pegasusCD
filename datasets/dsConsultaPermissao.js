@@ -1,40 +1,58 @@
+// BUSCA TODOS OS PROJETOS (OS) CADASTRADOS NO RM
 function createDataset(fields, constraints, sortFields) {
-    var dsOSparaCDverifica = DatasetBuilder.newDataset();
+
+	var dsConsultaPermissao = DatasetBuilder.newDataset();
     var dataSource = "/jdbc/FluigDS";
     var ic = new javax.naming.InitialContext();
     var ds = ic.lookup(dataSource);
     var created = false;
-
-    var numOS = ""
-    var numplanocorte = ""
-
+    
+    var login = ""
+    var grupo = ""
+    var grupo2 = ""
 
     if (constraints != null) {
     	
         for (var i = 0; i < constraints.length; i++) {
         	
-        	if(constraints[i].fieldName == "OS"){
+        	if(constraints[i].fieldName == "LOGIN"){
         		
-        		numOS = constraints[i].initialValue;
+        		login = constraints[i].initialValue;
         	
         	}
-            if(constraints[i].fieldName == "NUMPLANOCORTE"){
+            if(constraints[i].fieldName == "GROUPCODE"){
         		
-        		numplanocorte = constraints[i].initialValue;
-        		
+        		grupo = constraints[i].initialValue;
+        	
         	}
-
+            if(constraints[i].fieldName == "GROUPCODEALT"){
+        		
+        		grupo2 = constraints[i].initialValue;
+        	
+        	}
         }
         
     }
 
-    var myQuery = "  select top 1 1 OS "+
-                  "  from ESTOQUECD "+
-                  "  where OS = '"+numOS+"' "+
-                  "  and PLANOCORTE = '"+numplanocorte+"'; "
-                    
-    log.info("QUERY dsOSparaCDverifica: " + myQuery);
 
+    var myQuery =   " DECLARE @UserLogin NVARCHAR(50) = '"+login+"'; "+
+                    " DECLARE @GroupCode1 NVARCHAR(50) = '"+grupo+"'; "+
+                    " DECLARE @GroupCode2 NVARCHAR(50) = '"+grupo2+"'; "+
+                    " IF EXISTS (SELECT 1 FROM FDN_GROUPUSERROLE WHERE login = @UserLogin AND GROUP_CODE = @GroupCode1) "+
+                    " BEGIN "+
+                    "     SELECT * "+
+                    "     FROM FDN_GROUPUSERROLE "+
+                    "     WHERE login = @UserLogin AND GROUP_CODE = @GroupCode1; "+
+                    " END "+
+                    " ELSE "+
+                    " BEGIN "+
+                    "     SELECT * "+
+                    "     FROM FDN_GROUPUSERROLE "+
+                    "     WHERE login = @UserLogin AND GROUP_CODE = @GroupCode2; "+
+                    " END ";
+        
+    log.info("QUERY dsConsultaPermissao: " + myQuery);
+    
     try {
     	
         var conn = ds.getConnection();
@@ -48,7 +66,7 @@ function createDataset(fields, constraints, sortFields) {
             	
                 for (var i = 1; i <= columnCount; i++) {
                 	
-                	dsOSparaCDverifica.addColumn(rs.getMetaData().getColumnName(i));
+                	dsConsultaPermissao.addColumn(rs.getMetaData().getColumnName(i));
                 	
                 }
                 
@@ -74,7 +92,7 @@ function createDataset(fields, constraints, sortFields) {
                 
             }
             
-            dsOSparaCDverifica.addRow(Arr);
+            dsConsultaPermissao.addRow(Arr);
             
         }
         
@@ -97,7 +115,7 @@ function createDataset(fields, constraints, sortFields) {
         }
         
     }
-
-    return dsOSparaCDverifica
-
-}	
+    
+    return dsConsultaPermissao;
+	
+}

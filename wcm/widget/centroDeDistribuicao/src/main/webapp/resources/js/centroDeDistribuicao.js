@@ -2,9 +2,16 @@ var MyWidget = SuperWidget.extend({
 
     variavelNumerica: null,
     variavelCaracter: null,
-    
+    filterOs : null,
+    filterPlanoCorte : null,
+    filterOsSaida : null,
+    filterPlanoCorteSaida : null,
+    filterOsConsulta : null,
+    filterPlanoConsulta : null,
+
     //método iniciado quando a widget é carregada
-    init: function() {
+    init: async function() {
+        myLoading2.show()
         setTimeout((
             $("#opcoesExtra").addClass("ninjaOculto")
         ),500)
@@ -16,18 +23,21 @@ var MyWidget = SuperWidget.extend({
             limparConsultaPagina()
             limparTudo() //Entrada
             limparSaidaPagina()
-
-            myLoading2.show()
+            
+            
             $('.screen').hide();
             $('#fakeRouter').removeAttr('hidden');
             var relatedDiv = $(this).data('related-div');
             console.log(relatedDiv)
             if(relatedDiv === 'telaSaida'){
                 $('#navbar-logo-texto').text("Controle de Saida")
+                reiniciaFiltros()
             } else if(relatedDiv === 'telaConsulta'){
                 $('#navbar-logo-texto').text("Histórico de movientações")
+                reiniciaFiltros()
             } else if(relatedDiv === 'telaEntrada'){
                 $('#navbar-logo-texto').text("Controle de Entrada")
+                reiniciaFiltros()
             }
             $('#' + relatedDiv).show();
             myLoading2.hide()
@@ -42,8 +52,9 @@ var MyWidget = SuperWidget.extend({
             $('#' + relatedDiv).show();
             myLoading2.hide()
         });
-
-
+        verificaPermissao()
+        
+        myLoading2.hide()
         //Animação
         $('.animate').css({
             'opacity': '1',
@@ -273,14 +284,38 @@ var MyWidget = SuperWidget.extend({
                 renderContent: ['PLANOCORTE']
             }
         };
-        var filterOs = FLUIGC.filter('#NUM_OS', settingsExampleDatasetOS);
-        var filterPlanoCorte = FLUIGC.filter('#NUMPLANOCORTE', settingsExampleDatasetPlanoCorte)
-        var filterOsSaida = FLUIGC.filter('#NUM_OS_SAIDA', settingsExampleDatasetOSSaida);
-        var filterPlanoCorteSaida = FLUIGC.filter('#NUMPLANOCORTE_SAIDA', settingsExampleDatasetPlanoCorteSaida)
-        var filterOsConsulta = FLUIGC.filter('#NUM_OS_CONSULTA', settingsExampleDatasetOSConsulta);
-        var filterPlanoConsulta = FLUIGC.filter('#NUMPLANOCORTE_CONSULTA', settingsExampleDatasetPlanoCorteConsulta)
+        if( MyWidget.filterOs==null){
+            MyWidget.filterOs = FLUIGC.filter('#NUM_OS', settingsExampleDatasetOS);
+        }else{
+            MyWidget.filterOs.reload(settingsExampleDatasetOS)
+        }
+        if( MyWidget.filterPlanoCorte==null){
+            MyWidget.filterPlanoCorte = FLUIGC.filter('#NUMPLANOCORTE', settingsExampleDatasetPlanoCorte)
+        }else{
+            MyWidget.filterPlanoCorte.reload(settingsExampleDatasetPlanoCorte)
+        }
+        if( MyWidget.filterOsSaida==null){
+            MyWidget.filterOsSaida = FLUIGC.filter('#NUM_OS_SAIDA', settingsExampleDatasetOSSaida);
+        }else{
+            MyWidget.filterOsSaida.reload(settingsExampleDatasetOSSaida)
+        }
+        if( MyWidget.filterPlanoCorteSaida==null){
+            MyWidget.filterPlanoCorteSaida = FLUIGC.filter('#NUMPLANOCORTE_SAIDA', settingsExampleDatasetPlanoCorteSaida)
+        }else{
+            MyWidget.filterPlanoCorteSaida.reload(settingsExampleDatasetPlanoCorteSaida)
+        }
+        if( MyWidget.filterOsConsulta==null){
+            MyWidget.filterOsConsulta = FLUIGC.filter('#NUM_OS_CONSULTA', settingsExampleDatasetOSConsulta);
+        }else{
+            MyWidget.filterOsConsulta.reload(settingsExampleDatasetOSConsulta)
+        }
+        if( MyWidget.filterPlanoConsulta==null){
+            MyWidget.filterPlanoConsulta = FLUIGC.filter('#NUMPLANOCORTE_CONSULTA', settingsExampleDatasetPlanoCorteConsulta)
+        }else{
+            MyWidget.filterPlanoConsulta.reload(settingsExampleDatasetPlanoCorteConsulta)
+        }
 
-        filterOs.on('fluig.filter.item.added', function(data){
+        MyWidget.filterOs.on('fluig.filter.item.added', function(data){
 
             console.log(data.item)
 
@@ -290,10 +325,10 @@ var MyWidget = SuperWidget.extend({
             $("#CODFILIAL").val(String(data.item.CODFILIAL))
             $("#NUMPLANOCORTE").val(String(data.item.NUMPLANOCORTE))
 
-            filterPlanoCorte.reload(MyWidget.reloadFilter("PLANO"))
+            MyWidget.filterPlanoCorte.reload(MyWidget.reloadFilter("#PLANO"))
             
         })
-        filterOsSaida.on('fluig.filter.item.added', function(data){
+        MyWidget.filterOsSaida.on('fluig.filter.item.added', function(data){
 
             console.log(data.item)
 
@@ -301,10 +336,10 @@ var MyWidget = SuperWidget.extend({
             $("#NUM_OS_SAIDA").val(String(data.item.OS))
             $("#NUMPLANOCORTE_SAIDA").val(String(data.item.PLANOCORTE))
 
-            filterPlanoCorteSaida.reload(MyWidget.reloadFilter("PLANO_SAIDA"))
+            MyWidget.filterPlanoCorteSaida.reload(MyWidget.reloadFilter("#PLANO_SAIDA"))
             
         })
-        filterOsConsulta.on('fluig.filter.item.added', function(data){
+        MyWidget.filterOsConsulta.on('fluig.filter.item.added', function(data){
 
             console.log(data.item)
 
@@ -312,7 +347,7 @@ var MyWidget = SuperWidget.extend({
             $("#NUM_OS_CONSULTA").val(String(data.item.OS))
             $("#NUMPLANOCORTE_CONSULTA").val(String(data.item.PLANOCORTE))
 
-            filterPlanoConsulta.reload(MyWidget.reloadFilter("PLANO_CONSULTA"))
+            MyWidget.filterPlanoConsulta.reload(MyWidget.reloadFilter("#PLANO_CONSULTA"))
             
         })
     },
@@ -328,12 +363,35 @@ var MyWidget = SuperWidget.extend({
     },
     limpaInput: function(id){
 
-        var myAutocomplete = FLUIGC.autocomplete(id);
-        myAutocomplete.removeAll();
+        if(id=="#NUM_OS"){
+            MyWidget.filterOs.removeAll();
+        }
+        else if(id=="#NUMPLANOCORTE"){
+            MyWidget.filterPlanoCorte.removeAll();
+        }
+        else if(id=="#NUM_OS_SAIDA"){
+            MyWidget.filterOsSaida.removeAll();
+        }
+        else if(id=="#NUMPLANOCORTE_SAIDA"){
+            MyWidget.filterPlanoCorteSaida.removeAll();
+        }
+        else if(id=="#NUM_OS_CONSULTA"){
+            MyWidget.filterOsConsulta.removeAll();
+        }
+        else if(id=="#NUMPLANOCORTE_CONSULTA"){
+            MyWidget.filterPlanoConsulta.removeAll();
+        }
+        else{
+            console.log("Filtro não encontrado para limpeza")
+        }
+
         
     },
+    recarregaInput: function(){
+        this.filter()
+    },
     reloadFilter : function(id){
-        if(id =="PLANO"){
+        if(id =="#PLANO"){
             var planoCorte = this.getDatasetPlanoCorte();
 
             var settingsExampleDatasetPlanoCorte = {
@@ -357,7 +415,7 @@ var MyWidget = SuperWidget.extend({
 
             return settingsExampleDatasetPlanoCorte;
         }
-        if(id =="PLANO_SAIDA"){
+        if(id =="#PLANO_SAIDA"){
             var planoCorte = this.getDatasetPlanoCorteSaida();
 
             var settingsExampleDatasetPlanoCorteSaida = {
@@ -381,7 +439,7 @@ var MyWidget = SuperWidget.extend({
 
             return settingsExampleDatasetPlanoCorteSaida;
         }
-        if(id =="PLANO_CONSULTA"){
+        if(id =="#PLANO_CONSULTA"){
             var planoCorte = this.getDatasetPlanoCorteConsulta();
 
             var settingsExampleDatasetPlanoCorteConsulta = {
@@ -405,7 +463,7 @@ var MyWidget = SuperWidget.extend({
 
             return settingsExampleDatasetPlanoCorteConsulta;
         }
-        if(id =="OS"){
+        if(id =="#OS"){
             var os = this.getDatasetOS();
             var settingsExampleDatasetOS = {
                 source: os,
@@ -428,7 +486,7 @@ var MyWidget = SuperWidget.extend({
 
             return settingsExampleDatasetOS;
         }
-        if(id =="OS_SAIDA"){
+        if(id =="#OS_SAIDA"){
             var os = this.getDatasetOSSaida();
             var settingsExampleDatasetOSSaida = {
                 source: os,
@@ -451,6 +509,29 @@ var MyWidget = SuperWidget.extend({
 
             return settingsExampleDatasetOSSaida;
         }
+        if(id =="#OS_CONSULTA"){
+            var os = this.getDatasetOSConsulta();
+            var settingsExampleDatasetOSConsulta = {
+                source: os,
+                displayKey: 'OS_CONSULTA',
+                multiSelect: false,
+                style: {
+                    autocompleteTagClass: 'tag-gray',
+                    tableSelectedLineClass: 'info'
+                },
+                table: {
+                    header: [{
+                        'title': 'Os',
+                        'size': 'col-xs-9',
+                        'dataorder': 'OS',
+                        'standard': true
+                    }],
+                    renderContent: ['OS']
+                }
+            };
+
+            return settingsExampleDatasetOSConsulta;
+        }
     }
 });
 
@@ -461,4 +542,51 @@ var MyWidget = SuperWidget.extend({
 function isNullOrEmptyOrUndefined(value) {
     return value === null || value === undefined || value === '';
 }
+
+function reiniciaFiltros(){
+    MyWidget.recarregaInput()
+}
+
+async function verificaPermissao(){
+        var usuario = window.parent.window.WCMAPI.userLogin
+        var grupo = 'editorCD'
+        var grupo2 = 'visualizarCD'
+        var a1,a2,a3
+            var constraints = new Array()
+            if (!isNullOrEmptyOrUndefined(usuario)) {
+                a1 = DatasetFactory.createConstraint("LOGIN", usuario, usuario, ConstraintType.MUST);
+                constraints.push(a1);
+            }
+            if (!isNullOrEmptyOrUndefined(grupo)) {
+                a2 = DatasetFactory.createConstraint("GROUPCODE", grupo, grupo, ConstraintType.MUST);
+                constraints.push(a2);
+            }
+            if (!isNullOrEmptyOrUndefined(grupo2)) {
+                a3 = DatasetFactory.createConstraint("GROUPCODEALT", grupo2, grupo2, ConstraintType.MUST);
+                constraints.push(a3);
+            }
+            var dataset = DatasetFactory.getDataset('dsConsultaPermissao', null, constraints, null);
+            var row = dataset.values
+            console.log("Esses são os valores retornados:")
+            console.log(row[0].GROUP_CODE)
+            var cargo = row[0].GROUP_CODE
+            if(row == null || row == undefined || row == ""){
+                console.log("usuário sem permissão")
+                myLoading2.hide();
+                FLUIGC.toast({
+                  title: 'Sem retorno: ',
+                message: 'Você não pode acessar o CD',
+                  type: 'danger'
+                });
+                $(".menu").empty()
+                return false
+            } else if(cargo === 'visualizarCD') {
+                console.log("usuario tem permissão parcial")
+                $(".btn2").addClass("semPermissao")
+                $(".btn1").addClass("semPermissao")
+                return true
+            }
+}
+
+
 
